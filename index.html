@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quorum · The club treasury nobody can run off with</title>
+  <meta name="description" content="Collect dues in USDC. Small spends go through instantly, big ones need your officers to sign off, and every member sees every dollar. Built on Arc." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="logo"><span class="logo-mark">Q</span>Quorum</a>
+    <div class="nav-right">
+      <span id="wallet-bal" class="pill hidden"></span>
+      <button id="connect" class="btn btn-dark">Connect wallet</button>
+    </div>
+  </nav>
+
+  <div id="banner" class="banner hidden"></div>
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- ============ HOME ============ -->
+  <main id="home" class="wrap hidden">
+    <section class="hero">
+      <div class="hero-text">
+        <span class="eyebrow">Built on Arc · Powered by USDC</span>
+        <h1>Your club's money.<br /><span class="grad">Nobody can run off with it.</span></h1>
+        <p class="lead">Most student orgs run their money through one treasurer's Venmo. Quorum puts dues in a shared treasury where small purchases go through instantly, anything bigger needs your officers to sign off, and every member can see every dollar.</p>
+      </div>
+      <div class="how">
+        <div class="how-step"><span>1</span><div><b>Collect dues</b><p>Members pay in USDC with one link. No more chasing Venmos.</p></div></div>
+        <div class="how-step"><span>2</span><div><b>Spend with rules</b><p>Pizza under the daily allowance goes through. The $400 competition fee needs 2 of 3 officers.</p></div></div>
+        <div class="how-step"><span>3</span><div><b>Everyone sees everything</b><p>Every deposit and every spend, with the reason, recorded on-chain for good.</p></div></div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card">
+        <h2>Start a treasury</h2>
+        <p class="muted">You're automatically an officer. Add your other officers' wallet addresses.</p>
+        <label>Club name</label>
+        <input id="c-name" maxlength="60" placeholder="Illini Robotics" />
+        <label>Other officers <span class="hint">one wallet address per line</span></label>
+        <textarea id="c-officers" rows="3" placeholder="0x…&#10;0x…"></textarea>
+        <div class="row">
+          <div>
+            <label>Approvals needed for big spends</label>
+            <select id="c-threshold"></select>
+          </div>
+          <div>
+            <label>Daily allowance <span class="hint">no approval needed</span></label>
+            <div class="money-input"><span>$</span><input id="c-limit" type="number" min="0" step="1" value="50" /></div>
+          </div>
+        </div>
+        <p id="c-rule" class="rule"></p>
+        <button id="c-create" class="btn btn-primary btn-block">Create treasury</button>
+      </div>
+
+      <div class="card">
+        <h2>Your clubs</h2>
+        <div id="my-clubs" class="club-list"><p class="muted">Connect your wallet to see the clubs you're part of.</p></div>
+        <div class="divider"></div>
+        <label>Open a club by ID</label>
+        <div class="inline">
+          <input id="open-id" type="number" min="0" placeholder="0" />
+          <button id="open-go" class="btn btn-light">Open</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ CLUB ============ -->
+  <main id="club" class="wrap hidden">
+    <section class="club-head card">
+      <div class="club-title">
+        <div>
+          <span class="eyebrow" id="club-id"></span>
+          <h1 id="club-name">Loading…</h1>
+          <p id="club-rule" class="muted"></p>
+        </div>
+        <button id="invite" class="btn btn-light">🔗 Copy dues link</button>
+      </div>
+      <div class="stats">
+        <div class="stat big"><span>Treasury balance</span><b id="s-balance">–</b></div>
+        <div class="stat"><span>Total raised</span><b id="s-raised">–</b></div>
+        <div class="stat"><span>Total spent</span><b id="s-spent">–</b></div>
+        <div class="stat"><span>Members paid</span><b id="s-members">–</b></div>
+        <div class="stat"><span>Allowance left today</span><b id="s-allow">–</b></div>
+      </div>
+    </section>
+
+    <section class="grid-2 club-grid">
+      <div class="col">
+        <div class="card">
+          <h2>Pay dues</h2>
+          <div class="chips" id="dues-chips">
+            <button data-v="10">$10</button><button data-v="25">$25</button><button data-v="50">$50</button><button data-v="100">$100</button>
+          </div>
+          <div class="row">
+            <div>
+              <label>Amount</label>
+              <div class="money-input"><span>$</span><input id="d-amount" type="number" min="0.01" step="0.01" value="25" /></div>
+            </div>
+            <div>
+              <label>Note</label>
+              <input id="d-note" maxlength="80" placeholder="Fall semester dues" />
+            </div>
+          </div>
+          <button id="d-pay" class="btn btn-primary btn-block">Pay dues</button>
+        </div>
+
+        <div class="card" id="spend-card">
+          <h2>Request a spend</h2>
+          <p class="muted" id="spend-who">Only officers can request spends.</p>
+          <div id="spend-form">
+            <label>Pay to (wallet address)</label>
+            <input id="sp-to" placeholder="0x… vendor, venue, or officer being reimbursed" />
+            <div class="row">
+              <div>
+                <label>Amount</label>
+                <div class="money-input"><span>$</span><input id="sp-amount" type="number" min="0.01" step="0.01" placeholder="40" /></div>
+              </div>
+              <div>
+                <label>What's it for?</label>
+                <input id="sp-reason" maxlength="120" placeholder="Pizza for general meeting" />
+              </div>
+            </div>
+            <p id="sp-hint" class="rule"></p>
+            <button id="sp-go" class="btn btn-dark btn-block">Submit request</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Officers</h2>
+          <div id="officers" class="officers"></div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card">
+          <h2>Waiting for approval <span id="pending-count" class="count"></span></h2>
+          <div id="pending" class="pending"></div>
+        </div>
+        <div class="card">
+          <h2>Activity</h2>
+          <p class="muted small">Every dollar in and out, permanently on Arc. Anyone can verify it.</p>
+          <div id="ledger" class="ledger"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <main id="setup" class="wrap hidden">
+    <div class="card narrow">
+      <h2>Almost there</h2>
+      <p>The Quorum contract address isn't configured yet. Deploy it with <code>PRIVATE_KEY=0x… node scripts/deploy.mjs</code>, then restart the dev server. See the README.</p>
+    </div>
+  </main>
+
+  <footer>Quorum · Built on Arc Testnet · Dues and spending in USDC · <a id="contract-link" target="_blank" rel="noopener">View contract</a></footer>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
